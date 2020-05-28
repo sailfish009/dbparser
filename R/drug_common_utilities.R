@@ -128,3 +128,9 @@ check_parameters_validation <- function(save_table, database_connection) {
     stop("Please make sure to call read_drugbank_xml_db method first")
   }
 }
+
+get_list_element_value <- function(mylist, element) {
+  ifelse(is.null(mylist[[element]]) |
+           is_empty(mylist[[element]]),
+         NA, mylist[[element]][[1]])
+}

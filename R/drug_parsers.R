@@ -66,7 +66,7 @@ drug <-
     if (!override_csv & file.exists(path)) {
       drugs <- readr::read_csv(path)
     } else {
-      drugs <- map_df(pkg_env$children, ~ drug_df(.x)) %>% unique()
+      drugs <- map_df(pkg_env$drugs, ~ drug_row(.x)) %>% unique()
       write_csv(drugs, save_csv, csv_path)
     }
 

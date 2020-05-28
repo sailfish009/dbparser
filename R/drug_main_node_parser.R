@@ -1,46 +1,54 @@
-# Extract drug df
-drug_df <- function(rec) {
-  tibble(
-    primary_key = xmlValue(rec["drugbank-id"][[1]]),
-    other_keys = ifelse(length(rec["drugbank-id"]) > 1,
-      paste(map_chr(
-        c(2:length(rec["drugbank-id"])),
-        ~ xmlValue(rec["drugbank-id"][[.]])
-      ),
-      collapse = ","
-      ), NA
-    ),
-    type = xmlGetAttr(node = rec, name = "type"),
-    created = as.Date(xmlGetAttr(node = rec, name = "created")),
-    updated = as.Date(xmlGetAttr(node = rec, name = "updated")),
-    name = xmlValue(rec[["name"]]),
-    description = xmlValue(rec[["description"]]),
-    cas_number = xmlValue(rec[["cas-number"]]),
-    unii = xmlValue(rec[["unii"]]),
-    average_mass = xmlValue(rec[["average-mass"]]),
-    monoisotopic_mass = xmlValue(rec[["monoisotopic-mass"]]),
-    state = xmlValue(rec[["state"]]),
-    groups_count = xmlSize(rec[["groups"]]),
-    articles_count = xmlSize(rec[["general-references"]][["articles"]]),
-    books_count = xmlSize(rec[["general-references"]][["textbooks"]]),
-    links_count = xmlSize(rec[["general-references"]][["links"]]),
-    synthesis_reference = xmlValue(rec[["synthesis-reference"]]),
-    indication = xmlValue(rec[["indication"]]),
-    pharmacodynamics = xmlValue(rec[["pharmacodynamics"]]),
-    mechanism_of_action = xmlValue(rec[["mechanism-of-action"]]),
-    metabolism = xmlValue(rec[["metabolism"]]),
-    absorption = xmlValue(rec[["absorption"]]),
-    half_life = xmlValue(rec[["half-life"]]),
-    protein_binding = xmlValue(rec[["protein-binding"]]),
-    route_of_elimination = xmlValue(rec[["route-of-elimination"]]),
-    volume_of_distribution = xmlValue(rec[["volume-of-distribution"]]),
-    clearance = xmlValue(rec[["clearance"]]),
-    international_brands = xmlValue(rec[["international-brands"]]),
-    pdb_entries = xmlSize(rec[["pdb-entries"]]),
-    fda_label = xmlValue(rec[["fda-label"]]),
-    msds = xmlValue(rec[["msds"]]),
-    food_interactions = xmlSize(rec[["food-interactions"]]),
-    drug_interactions_count = xmlSize(rec[["drug-interactions"]]),
-    toxicity = xmlValue(rec[["toxicity"]])
+drug_elements_names <-
+  c(
+    "drugbank-id",
+    "name",
+    "description",
+    "cas-number",
+    "unii",
+    "average-mass",
+    "monoisotopic-mass",
+    "state",
+    "synthesis-reference",
+    "indication",
+    "pharmacodynamics",
+    "mechanism-of-action",
+    "metabolism",
+    "absorption",
+    "half-life",
+    "protein-binding",
+    "route-of-elimination",
+    "volume-of-distribution",
+    "clearance",
+    "drug",
+    "international-brands",
+    "fda-label",
+    "msds" ,
+    "toxicity"
   )
+# Extract drug df
+drug_row <- function(drug) {
+  drug_attributes <- drug_element_value(drug)
+  drug_elements <- map_dfc(xml_find_all(drug, "./*[not(*)]"),
+                           ~drug_element_value(.x))
+  if ("other_Keys" %in% names(drug_elements)) {
+    drug_elements <- drug_elements %>%
+      unite("Keys", starts_with("other_Keys"), sep = "_")
+  }
+  return(bind_cols(drug_elements, drug_attributes))
+}
+
+drug_element_value <- function(d) {
+  d_name <- xml_name(d)
+  if (!d_name %in% drug_elements_names) {
+    return()
+  }
+  if (d_name == "drug") {
+    return(bind_rows(xml_attrs(d)))
+  }
+  d_atrribute <- xml_attr(d, "primary")
+  if (d_name == "drugbank-id" & is.na(d_atrribute)) {
+    d_name <- "Other_Keys"
+  }
+  d_value <- xml_text(d)
+  return(tibble(!!d_name := d_value))
 }
